@@ -4,11 +4,11 @@ Streamlit dashboard for airline route revenue and network performance using the 
 
 ## Group Members
 
-- **Nicolas Wilches** — <nicolaswilches@icloud.com>
-- **David Carrillo** — <davidcarrillo@student.ie.edu>
-- **Lasca** — <mss@ab-on.com>
-- **Nachi** — <nachi@student.ie.edu>
-- **Siddharth** — <siddharth_murali@student.ie.edu>
+- **Nicolas Wilches**: <nicolaswilches@icloud.com>
+- **David Carrillo**: <davidcarrillo@student.ie.edu>
+- **Martin Schneider**: <martin.schneider@student.ie.edu>
+- **Nachi**: <nachi@student.ie.edu>
+- **Siddharth**: <siddharth_murali@student.ie.edu>
 
 ## Project Scope
 
