@@ -7,6 +7,8 @@ Streamlit dashboard for airline route revenue and network performance using the 
 - **Nicolas Wilches** — <nicolaswilches@icloud.com>
 - **David Carrillo** — <davidcarrillo@student.ie.edu>
 - **Lasca** — <mss@ab-on.com>
+- **Nachi** — <nachi@student.ie.edu>
+- **Siddharth** — <siddharth_murali@student.ie.edu>
 
 ## Project Scope
 
