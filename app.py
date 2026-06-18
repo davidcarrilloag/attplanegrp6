@@ -30,16 +30,20 @@ CABIN_LABELS = {
     "P": "Premium",
 }
 
+# Electric blue theme: only the blue RGB channel (no red, no green), varied by intensity.
 COLORWAY = [
-    "#2563EB",
-    "#10B981",
-    "#F59E0B",
-    "#EF4444",
-    "#8B5CF6",
-    "#14B8A6",
-    "#F97316",
-    "#64748B",
+    "#0000FF",
+    "#000099",
+    "#0000CC",
+    "#000066",
+    "#0000E6",
+    "#0000B3",
+    "#000080",
+    "#00004D",
 ]
+
+# Sequential scale for value-sorted charts: light blue (low) to dark blue (high).
+BLUE_SCALE = [[0.0, "#CFE0FF"], [1.0, "#001A66"]]
 
 px.defaults.template = "plotly_white"
 px.defaults.color_discrete_sequence = COLORWAY
@@ -261,22 +265,22 @@ st.markdown(
         padding-top: 1.5rem;
     }
     div[data-testid="stMetric"] {
-        background: #94A3B8;
+        background: #0F62FF;
         border: none;
         border-radius: 8px;
         padding: 0.7rem 0.85rem;
     }
     div[data-testid="stMetric"] label {
-        color: #1E293B;
+        color: rgba(255, 255, 255, 0.85);
         font-size: 0.78rem;
     }
     div[data-testid="stMetricValue"] {
-        color: #0F172A;
+        color: #FFFFFF;
         font-size: 1.35rem;
         line-height: 1.2;
     }
     div[data-testid="stMetricDelta"] {
-        color: #1E293B;
+        color: rgba(255, 255, 255, 0.85);
         font-size: 0.75rem;
     }
     </style>
@@ -395,14 +399,14 @@ with tab_route:
         top_routes.to_pandas(),
         x="route_label",
         y="total_revenue",
-        color="origin_continent",
+        color="total_revenue",
+        color_continuous_scale=BLUE_SCALE,
         labels={
             "route_label": "Route",
             "total_revenue": "Revenue",
-            "origin_continent": "Origin continent",
         },
     )
-    fig_routes.update_layout(xaxis_tickangle=-35)
+    fig_routes.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
     st.plotly_chart(style_plot(fig_routes), width="stretch")
 
     left, right = st.columns(2)
@@ -510,7 +514,7 @@ with tab_fleet:
         x="model",
         y="scheduled_flights",
         color="aircraft",
-        color_continuous_scale="Blues",
+        color_continuous_scale=BLUE_SCALE,
         labels={
             "model": "Aircraft model",
             "scheduled_flights": "Scheduled flights",
