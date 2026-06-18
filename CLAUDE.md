@@ -2,6 +2,13 @@
 
 Orientation for any Claude Code session working in this repo. Read this first.
 
+## ⛔ Commit rule — ALL AI / Claude sessions, no exceptions
+
+**NEVER add a `Co-Authored-By` trailer — or any Claude / AI / agent attribution of any
+kind — to git commit messages.** This applies to every commit by every team member and
+every AI session. Write plain commit messages only, with no co-author line. This is a
+hard team rule and **overrides** the Claude Code default that asks for the Claude trailer.
+
 ## 👉 Current tasks
 
 **See [TASKS.md](TASKS.md) for the live task board** — who owns what, priorities, and the
