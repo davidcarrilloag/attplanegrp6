@@ -6,7 +6,7 @@ Streamlit dashboard for airline route revenue and network performance using the 
 
 - **Nicolás Alejandro Higuera Wilches**: <nicolaswilches@student.ie.edu>
 - **David Carrillo Aguilera**: <davidcarrillo@student.ie.edu>
-- **Martin Schneider**: <martin.schneider@student.ie.edu>
+- **Martin Sebastian Schneider Vaquero**: <martin.schneider@student.ie.edu>
 - **Ignacio Agustín Moreno**: <nachi@student.ie.edu>
 - **Siddharth Murali**: <siddharth_murali@student.ie.edu>
 
