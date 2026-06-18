@@ -42,11 +42,36 @@ COLORWAY = [
     "#00004D",
 ]
 
-# Sequential scale for value-sorted charts: light blue (low) to dark blue (high).
-BLUE_SCALE = [[0.0, "#CFE0FF"], [1.0, "#001A66"]]
+# Standard gradient for value-sorted charts: light blue (low) to electric blue (high).
+BLUE_SCALE = [[0.0, "#7FA8FF"], [1.0, "#0000FF"]]
 
 px.defaults.template = "plotly_white"
 px.defaults.color_discrete_sequence = COLORWAY
+
+
+def blue_palette(n):
+    """n distinguishable blue tones, light (low) to electric blue (high)."""
+    lo, hi = (0x7F, 0xA8, 0xFF), (0x00, 0x00, 0xFF)
+    if n <= 1:
+        return ["#0000FF"]
+    return [
+        "#%02X%02X%02X" % tuple(round(lo[c] + (hi[c] - lo[c]) * (i / (n - 1))) for c in range(3))
+        for i in range(n)
+    ]
+
+
+def ranked_blue_map(df, category_col, value_col):
+    """Map each category to a blue tone, the largest total getting electric blue."""
+    order = (
+        df.lazy()
+        .group_by(category_col)
+        .agg(pl.col(value_col).sum().alias("_value"))
+        .sort("_value")
+        .collect()
+        .get_column(category_col)
+        .to_list()
+    )
+    return {cat: tone for cat, tone in zip(order, blue_palette(len(order)))}
 
 
 @st.cache_data
@@ -420,6 +445,7 @@ with tab_route:
             size_max=12,
             opacity=0.72,
             color="origin_continent",
+            color_discrete_map=ranked_blue_map(route_filtered, "origin_continent", "total_revenue"),
             hover_name="route_label",
             labels={
                 "distance": "Distance",
@@ -472,6 +498,7 @@ with tab_time:
         x="departure_month_date",
         y="total_revenue",
         color="cabin",
+        color_discrete_map=ranked_blue_map(monthly_filtered, "cabin", "total_revenue"),
         markers=False,
         labels={
             "departure_month_date": "Departure month",
@@ -488,10 +515,11 @@ with tab_time:
             cabin_filtered.to_pandas(),
             x="cabin",
             y="total_revenue",
-            color="cabin",
+            color="total_revenue",
+            color_continuous_scale=BLUE_SCALE,
             labels={"cabin": "Cabin", "total_revenue": "Revenue"},
         )
-        fig_cabin.update_layout(showlegend=False)
+        fig_cabin.update_layout(showlegend=False, coloraxis_showscale=False)
         st.plotly_chart(style_plot(fig_cabin), width="stretch")
 
     with col_mix:
@@ -502,6 +530,7 @@ with tab_time:
             values="tickets_sold",
             hole=0.45,
             color="cabin",
+            color_discrete_map=ranked_blue_map(cabin_filtered, "cabin", "tickets_sold"),
         )
         st.plotly_chart(style_plot(fig_mix), width="stretch")
 
