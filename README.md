@@ -2,6 +2,12 @@
 
 Streamlit dashboard for airline route revenue and network performance using the DB2 `ATTGRP6` schema.
 
+## Group Members
+
+- **Nicolas Wilches** — <nicolaswilches@icloud.com>
+- **David Carrillo** — <davidcarrillo@student.ie.edu>
+- **Lasca** — <mss@ab-on.com>
+
 ## Project Scope
 
 The dashboard is built for airline management, route planning, commercial analytics, and fleet operations teams. It focuses on revenue performance, route efficiency, monthly/cabin trends, and aircraft utilization.
