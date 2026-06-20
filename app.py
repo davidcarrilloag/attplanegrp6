@@ -274,9 +274,14 @@ def number(value: float | int) -> str:
 def style_plot(fig):
     fig.update_layout(
         font_family="Inter, Arial, sans-serif",
+        font_color="#E8EEF8",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=20, r=20, t=40, b=30),
         legend_title_text="",
     )
+    fig.update_xaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.15)")
+    fig.update_yaxes(gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.15)")
     return fig
 
 
@@ -561,16 +566,14 @@ with tab_fleet:
         size="scheduled_distance",
         size_max=12,
         opacity=0.72,
-        color="model",
         hover_name="aircraft_registration",
         labels={
             "maintenance_flight_hours": "Maintenance flight hours",
             "scheduled_flights": "Scheduled flights",
             "scheduled_distance": "Scheduled distance",
-            "model": "Aircraft model",
         },
     )
-    fig_maintenance.update_traces(marker=dict(line=dict(width=0.5, color="#FFFFFF")))
+    fig_maintenance.update_traces(marker=dict(color="#1E73FF", line=dict(width=0.5, color="#FFFFFF")))
     st.plotly_chart(style_plot(fig_maintenance), width="stretch")
 
     st.dataframe(
