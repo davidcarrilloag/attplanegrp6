@@ -24,10 +24,13 @@ MONEY_COLUMNS = {
     "revenue_per_flight_minute",
 }
 
+# Cabin codes mapped to fare tiers by VERIFIED average fare, not by first letter.
+# Live DB check: FLIGHTS prices are Economy < Premium < Business, and ticket fares rank
+# B < E < P, so by fare B is the lowest tier and P the highest. See README for the note.
 CABIN_LABELS = {
-    "B": "Business",
-    "E": "Economy",
-    "P": "Premium",
+    "B": "Economy",
+    "E": "Premium",
+    "P": "Business",
 }
 
 # Electric blue theme: only the blue RGB channel (no red, no green), varied by intensity.
@@ -42,22 +45,31 @@ COLORWAY = [
     "#00004D",
 ]
 
-# Standard gradient for value-sorted charts: light blue (low) to electric blue (high).
-BLUE_SCALE = [[0.0, "#7FA8FF"], [1.0, "#0000FF"]]
+# Standard gradient for value-sorted charts: larger = brighter so the biggest values pop
+# on the dark background. Low = dark navy, mid = electric blue, high = bright light blue.
+BLUE_SCALE = [[0.0, "#06143A"], [0.5, "#0000FF"], [1.0, "#9FC4FF"]]
 
 px.defaults.template = "plotly_white"
 px.defaults.color_discrete_sequence = COLORWAY
 
 
 def blue_palette(n):
-    """n distinguishable blue tones, light (low) to electric blue (high)."""
-    lo, hi = (0x7F, 0xA8, 0xFF), (0x00, 0x00, 0xFF)
+    """n distinguishable blue tones, dark (low) to bright light blue (high), so the
+    largest category is the brightest. Anchors: dark navy -> electric blue -> light blue."""
+    anchors = [(0x06, 0x14, 0x3A), (0x00, 0x00, 0xFF), (0x9F, 0xC4, 0xFF)]
     if n <= 1:
-        return ["#0000FF"]
-    return [
-        "#%02X%02X%02X" % tuple(round(lo[c] + (hi[c] - lo[c]) * (i / (n - 1))) for c in range(3))
-        for i in range(n)
-    ]
+        return ["#9FC4FF"]
+
+    def lerp(a, b, t):
+        return tuple(round(a[c] + (b[c] - a[c]) * t) for c in range(3))
+
+    tones = []
+    for i in range(n):
+        pos = i / (n - 1) * 2  # 0..2 across the two segments
+        seg = min(int(pos), 1)
+        rgb = lerp(anchors[seg], anchors[seg + 1], pos - seg)
+        tones.append("#%02X%02X%02X" % rgb)
+    return tones
 
 
 def ranked_blue_map(df, category_col, value_col):
@@ -110,11 +122,11 @@ def select_all_filter(label: str, values: list[str]) -> str:
 def cabin_name_expr() -> pl.Expr:
     return (
         pl.when(pl.col("cabin_class") == "B")
-        .then(pl.lit("Business"))
-        .when(pl.col("cabin_class") == "E")
         .then(pl.lit("Economy"))
-        .when(pl.col("cabin_class") == "P")
+        .when(pl.col("cabin_class") == "E")
         .then(pl.lit("Premium"))
+        .when(pl.col("cabin_class") == "P")
+        .then(pl.lit("Business"))
         .otherwise(pl.col("cabin_class"))
         .alias("cabin")
     )
@@ -188,12 +200,40 @@ def aggregate_routes(df: pl.DataFrame) -> pl.DataFrame:
         )
         .with_columns(
             (pl.col("total_revenue") / pl.col("tickets_sold")).alias("avg_ticket_value"),
-            (pl.col("total_revenue") / pl.col("distance")).alias("revenue_per_distance"),
-            (pl.col("total_revenue") / pl.col("flight_minutes")).alias(
-                "revenue_per_flight_minute"
-            ),
+            # Yield = average fare per distance unit / per flight minute. Using the average
+            # fare (not cumulative revenue) makes this a real per-trip yield, and the guards
+            # avoid inf/NaN if a route ever has zero distance or duration.
+            pl.when(pl.col("distance") > 0)
+            .then(pl.col("total_revenue") / pl.col("tickets_sold") / pl.col("distance"))
+            .alias("fare_per_distance"),
+            pl.when(pl.col("flight_minutes") > 0)
+            .then(pl.col("total_revenue") / pl.col("tickets_sold") / pl.col("flight_minutes"))
+            .alias("fare_per_minute"),
             route_label_expr(),
         )
+        .sort("total_revenue", descending=True)
+        .collect()
+    )
+
+
+def aggregate_city_pairs(route_df: pl.DataFrame) -> pl.DataFrame:
+    """Combine both directions of a route into one unordered city pair (A and B).
+
+    route_code is directional, so A to B and B to A are separate rows. For "top routes"
+    we usually care about the city pair, so we sum both directions together.
+    """
+    return (
+        route_df.lazy()
+        .with_columns(
+            pl.min_horizontal("origin", "destination").alias("city_a"),
+            pl.max_horizontal("origin", "destination").alias("city_b"),
+        )
+        .group_by("city_a", "city_b")
+        .agg(
+            pl.col("tickets_sold").sum().alias("tickets_sold"),
+            pl.col("total_revenue").sum().alias("total_revenue"),
+        )
+        .with_columns((pl.col("city_a") + " and " + pl.col("city_b")).alias("city_pair"))
         .sort("total_revenue", descending=True)
         .collect()
     )
@@ -358,11 +398,25 @@ if not selected_cabins:
 
 min_month = route_monthly_df.select(pl.min("departure_month_date")).item()
 max_month = route_monthly_df.select(pl.max("departure_month_date")).item()
+# Default the range to the last COMPLETE year so the partial final period (2026 is January
+# only) does not skew the monthly trend. The user can still extend to the full max month.
+last_full_year = (
+    route_monthly_df.group_by("departure_year")
+    .agg(pl.col("departure_month").n_unique().alias("n_months"))
+    .filter(pl.col("n_months") >= 12)
+    .select(pl.max("departure_year"))
+    .item()
+)
+default_end = date(int(last_full_year), 12, 1) if last_full_year is not None else max_month
 date_range = st.sidebar.date_input(
     "Departure month range",
-    value=(min_month, max_month),
+    value=(min_month, default_end),
     min_value=min_month,
     max_value=max_month,
+)
+st.sidebar.caption(
+    f"Default ends {default_end:%b %Y} (last complete year). "
+    f"Data runs to {max_month:%b %Y}, which is partial."
 )
 if isinstance(date_range, tuple) and len(date_range) == 2:
     start_month, end_month = date_range
@@ -392,6 +446,7 @@ if commercial_filtered.is_empty() or fleet_filtered.is_empty():
 route_filtered = aggregate_routes(commercial_filtered)
 monthly_filtered = aggregate_monthly(commercial_filtered)
 cabin_filtered = aggregate_cabins(commercial_filtered)
+city_pairs = aggregate_city_pairs(route_filtered)
 
 total_revenue = commercial_filtered.select(pl.sum("total_revenue")).item()
 tickets_sold = commercial_filtered.select(pl.sum("tickets_sold")).item()
@@ -406,15 +461,15 @@ metric_cols[2].metric("Avg ticket", money(avg_ticket_value))
 metric_cols[3].metric("Routes", number(routes))
 metric_cols[4].metric("Aircraft", number(aircraft))
 
-top_route = route_filtered.row(0, named=True)
-best_yield_route = route_filtered.sort("revenue_per_distance", descending=True).row(0, named=True)
+top_pair = city_pairs.row(0, named=True)
+best_yield_route = route_filtered.sort("fare_per_distance", descending=True, nulls_last=True).row(0, named=True)
 top_cabin = cabin_filtered.row(0, named=True)
 
 st.markdown(
     f"""
-**Current readout:** `{top_route["origin"]}` to `{top_route["destination"]}` is the largest revenue route for the selected commercial filters at {money(top_route["total_revenue"])}.
-The strongest revenue-per-distance route is `{best_yield_route["origin"]}` to `{best_yield_route["destination"]}`.
-Within the selected filters, {top_cabin["cabin"]} contributes the most revenue.
+**Current readout:** the biggest city pair for the selected filters is `{top_pair["city_pair"]}` at {money(top_pair["total_revenue"])}, counting both directions.
+The highest yield route (average fare per distance) is `{best_yield_route["origin"]}` to `{best_yield_route["destination"]}`.
+Within the selected filters, the {top_cabin["cabin"]} cabin contributes the most revenue.
 """
 )
 
@@ -423,20 +478,22 @@ tab_route, tab_time, tab_fleet, tab_data = st.tabs(
 )
 
 with tab_route:
-    st.subheader("Top Routes by Revenue")
-    top_routes = route_filtered.head(top_n)
+    st.subheader("Top City Pairs by Revenue (both directions)")
+    # Ascending sort so the largest pair sits at the top of the horizontal bar chart.
+    top_pairs = city_pairs.head(top_n).sort("total_revenue", descending=False)
     fig_routes = px.bar(
-        top_routes.to_pandas(),
-        x="route_label",
-        y="total_revenue",
+        top_pairs.to_pandas(),
+        x="total_revenue",
+        y="city_pair",
+        orientation="h",
         color="total_revenue",
         color_continuous_scale=BLUE_SCALE,
         labels={
-            "route_label": "Route",
+            "city_pair": "City pair",
             "total_revenue": "Revenue",
         },
     )
-    fig_routes.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
+    fig_routes.update_layout(coloraxis_showscale=False, yaxis_title="")
     st.plotly_chart(style_plot(fig_routes), width="stretch")
 
     left, right = st.columns(2)
@@ -463,7 +520,7 @@ with tab_route:
         st.plotly_chart(style_plot(fig_efficiency), width="stretch")
 
     with right:
-        st.subheader("Highest Revenue per Distance")
+        st.subheader("Highest Yield Routes (fare per distance)")
         yield_table = (
             route_filtered.lazy()
             .select(
@@ -471,10 +528,10 @@ with tab_route:
                 "tickets_sold",
                 "total_revenue",
                 "avg_ticket_value",
-                "revenue_per_distance",
-                "revenue_per_flight_minute",
+                "fare_per_distance",
+                "fare_per_minute",
             )
-            .sort("revenue_per_distance", descending=True)
+            .sort("fare_per_distance", descending=True, nulls_last=True)
             .head(top_n)
             .collect()
         )
@@ -484,14 +541,14 @@ with tab_route:
             hide_index=True,
             column_config={
                 "total_revenue": st.column_config.NumberColumn("Revenue", format="$%.0f"),
-                "avg_ticket_value": st.column_config.NumberColumn("Avg ticket", format="$%.2f"),
-                "revenue_per_distance": st.column_config.NumberColumn(
-                    "Revenue / distance",
-                    format="$%.2f",
+                "avg_ticket_value": st.column_config.NumberColumn("Avg fare", format="$%.2f"),
+                "fare_per_distance": st.column_config.NumberColumn(
+                    "Fare / distance",
+                    format="$%.3f",
                 ),
-                "revenue_per_flight_minute": st.column_config.NumberColumn(
-                    "Revenue / minute",
-                    format="$%.2f",
+                "fare_per_minute": st.column_config.NumberColumn(
+                    "Fare / minute",
+                    format="$%.3f",
                 ),
             },
         )
@@ -606,7 +663,7 @@ with tab_data:
             "tickets_sold",
             "total_revenue",
             "avg_ticket_value",
-            "revenue_per_distance",
+            "fare_per_distance",
         ).sort("total_revenue", descending=True),
         width="stretch",
         hide_index=True,
