@@ -49,10 +49,15 @@ Current prepared totals:
 
 ## Key Findings
 
-- The highest-revenue route is `NAP` to `LAS`, generating about `$1.03B` from `610,931` tickets.
-- The reverse route, `LAS` to `NAP`, is the second highest revenue route at about `$1.02B`.
-- Economy is the largest cabin by total revenue, contributing about `$219.6B` from `170.5M` tickets.
-- Premium has the highest average ticket value at about `$1,772`, despite much lower ticket volume than economy.
+- Cabin codes `B`, `E`, `P` do not follow intuitive names. We mapped them to fare tiers by
+  their verified average fare (validated against the `FLIGHTS` prices Economy < Premium <
+  Business): **B = Economy** (lowest fare), **E = Premium**, **P = Business** (highest fare).
+- The top city pair by revenue is **GMP and LHR** at about `$4.17B`, counting both directions.
+- The **Premium** cabin (code E) is the largest by revenue (about `$219.6B`) and by volume
+  (about `170.5M` tickets). This is unusual and we treat it as a property of the dataset.
+- The **Business** cabin (code P) has the highest average fare (about `$1,772`) but the lowest
+  volume (about `6.7M` tickets).
+- The **Economy** cabin (code B) is the cheapest at about `$749` average fare.
 - `BOMBARDIER CRJ-900` is the most heavily scheduled aircraft model, with `539,304` scheduled flights across `41` aircraft.
 
 ## Setup
@@ -107,8 +112,16 @@ The app reads the prepared Parquet files from `data/`.
 
 ## Assumptions and Limitations
 
-- Revenue analysis uses ticket `TOTAL_AMOUNT`, including fare and tax components.
-- Route efficiency uses route distance and flight minutes from `ROUTES`.
+- **Cabin mapping:** ticket `CLASS` codes B/E/P do not match intuitive cabin names, so we
+  mapped them to fare tiers by verified average fare (B = Economy, E = Premium, P = Business).
+  The volumes do not follow a typical pattern (the Premium tier has the highest volume), which
+  we treat as a property of the dataset, not a real commercial pattern.
+- **Route grain:** route_code is directional, so the top routes view aggregates both directions
+  into one city pair. The route table still shows directional detail.
+- **Time coverage:** data runs 2010 to 2026, but 2026 is January only, so the date filter
+  defaults to the last complete year to avoid skewing the monthly trend.
+- Revenue uses ticket `TOTAL_AMOUNT` (fare plus tax). Yield is the average fare per distance or
+  per flight minute, with guards against zero or null denominators.
 - Fleet utilization uses scheduled flights, not completed or delayed operations.
-- Passenger-level analysis is intentionally excluded from the dashboard.
+- Passenger level analysis is intentionally excluded from the dashboard.
 - Prepared files should be regenerated if the DB2 source data changes.
