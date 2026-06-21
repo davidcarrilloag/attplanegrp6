@@ -26,12 +26,12 @@ MONEY_COLUMNS = {
 
 # Ticket CLASS codes B/E/P do not follow intuitive names. A data review showed three clear
 # fare levels (B lowest, E middle, P highest) and the volumes do not behave like real cabins
-# (the cheapest class is not the highest volume one). So we label by neutral fare tier rather
-# than assert Economy/Premium/Business. The code is kept in parentheses for traceability.
+# (the cheapest class is not the highest volume one). So we label by neutral fare tier and keep
+# the apparent class name (B/E/P map to Business/Economy/Premium) in parentheses.
 CABIN_LABELS = {
-    "B": "Lower fare (B)",
-    "E": "Mid fare (E)",
-    "P": "Higher fare (P)",
+    "B": "Lower fare (Business)",
+    "E": "Mid fare (Economy)",
+    "P": "Higher fare (Premium)",
 }
 
 # Electric blue theme: only the blue RGB channel (no red, no green), varied by intensity.
@@ -54,6 +54,14 @@ CYAN = "#02CCFE"      # gradient high, highlight for the largest values and sing
 
 # Value-sorted charts: larger = brighter, so the biggest values pop on the dark background.
 BLUE_SCALE = [[0.0, NAVY], [0.5, ELECTRIC], [1.0, CYAN]]
+
+# Fixed, distinct colors for the three fare tiers so a tier keeps one color across every cabin
+# chart and all three stay visible on the dark background.
+CABIN_TIER_COLORS = {
+    "Lower fare (Business)": ELECTRIC,
+    "Mid fare (Economy)": CYAN,
+    "Higher fare (Premium)": "#7DB0FF",
+}
 
 px.defaults.template = "plotly_white"
 px.defaults.color_discrete_sequence = COLORWAY
@@ -128,11 +136,11 @@ def select_all_filter(label: str, values: list[str]) -> str:
 def cabin_name_expr() -> pl.Expr:
     return (
         pl.when(pl.col("cabin_class") == "B")
-        .then(pl.lit("Lower fare (B)"))
+        .then(pl.lit("Lower fare (Business)"))
         .when(pl.col("cabin_class") == "E")
-        .then(pl.lit("Mid fare (E)"))
+        .then(pl.lit("Mid fare (Economy)"))
         .when(pl.col("cabin_class") == "P")
-        .then(pl.lit("Higher fare (P)"))
+        .then(pl.lit("Higher fare (Premium)"))
         .otherwise(pl.col("cabin_class"))
         .alias("cabin")
     )
@@ -580,15 +588,39 @@ with tab_time:
         x="departure_month_date",
         y="total_revenue",
         color="cabin",
-        color_discrete_map=ranked_blue_map(monthly_filtered, "cabin", "total_revenue"),
+        color_discrete_map=CABIN_TIER_COLORS,
         markers=False,
         labels={
             "departure_month_date": "Departure month",
             "total_revenue": "Revenue",
-            "cabin": "Cabin",
+            "cabin": "Fare tier",
         },
     )
     st.plotly_chart(style_plot(fig_monthly), width="stretch")
+    st.caption(
+        "The Mid fare (Economy) tier earns the most revenue, but mainly because of volume, "
+        "not price. The tickets chart below shows it sells far more than the other tiers."
+    )
+
+    st.subheader("Monthly Tickets by Cabin")
+    fig_tickets = px.line(
+        monthly_filtered.to_pandas(),
+        x="departure_month_date",
+        y="tickets_sold",
+        color="cabin",
+        color_discrete_map=CABIN_TIER_COLORS,
+        markers=False,
+        labels={
+            "departure_month_date": "Departure month",
+            "tickets_sold": "Tickets sold",
+            "cabin": "Fare tier",
+        },
+    )
+    st.plotly_chart(style_plot(fig_tickets), width="stretch")
+    st.caption(
+        "Tickets sold per month by fare tier. The Mid fare (Economy) tier dominates volume, "
+        "which is why it leads revenue despite only a mid level fare."
+    )
 
     col_cabin, col_mix = st.columns(2)
     with col_cabin:
@@ -599,7 +631,7 @@ with tab_time:
             y="total_revenue",
             color="total_revenue",
             color_continuous_scale=BLUE_SCALE,
-            labels={"cabin": "Cabin", "total_revenue": "Revenue"},
+            labels={"cabin": "Fare tier", "total_revenue": "Revenue"},
         )
         fig_cabin.update_layout(showlegend=False, coloraxis_showscale=False)
         st.plotly_chart(style_plot(fig_cabin), width="stretch")
@@ -612,7 +644,7 @@ with tab_time:
             values="tickets_sold",
             hole=0.45,
             color="cabin",
-            color_discrete_map=ranked_blue_map(cabin_filtered, "cabin", "tickets_sold"),
+            color_discrete_map=CABIN_TIER_COLORS,
         )
         st.plotly_chart(style_plot(fig_mix), width="stretch")
 
@@ -636,23 +668,37 @@ with tab_fleet:
     fig_fleet.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
     st.plotly_chart(style_plot(fig_fleet), width="stretch")
 
-    st.subheader("Aircraft Utilization and Maintenance Exposure")
-    fig_maintenance = px.scatter(
-        fleet_filtered.to_pandas(),
-        x="maintenance_flight_hours",
-        y="scheduled_flights",
-        size="scheduled_distance",
-        size_max=8,
-        opacity=0.45,
-        hover_name="aircraft_registration",
+    st.subheader("Fuel Burned per Flight by Aircraft Model")
+    fuel_summary = (
+        model_summary.lazy()
+        .filter(pl.col("scheduled_flights") > 0)
+        .with_columns(
+            (
+                pl.col("estimated_fuel_gallons").cast(pl.Float64)
+                / pl.col("scheduled_flights").cast(pl.Float64)
+            ).alias("fuel_per_flight")
+        )
+        .sort("fuel_per_flight", descending=True)
+        .head(15)
+        .collect()
+    )
+    fig_fuel = px.bar(
+        fuel_summary.to_pandas(),
+        x="model",
+        y="fuel_per_flight",
+        color="fuel_per_flight",
+        color_continuous_scale=BLUE_SCALE,
         labels={
-            "maintenance_flight_hours": "Maintenance flight hours",
-            "scheduled_flights": "Scheduled flights",
-            "scheduled_distance": "Scheduled distance",
+            "model": "Aircraft model",
+            "fuel_per_flight": "Fuel per flight (gallons)",
         },
     )
-    fig_maintenance.update_traces(marker=dict(color=CYAN, line=dict(width=0.2, color="#FFFFFF")))
-    st.plotly_chart(style_plot(fig_maintenance), width="stretch")
+    fig_fuel.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
+    st.plotly_chart(style_plot(fig_fuel), width="stretch")
+    st.caption(
+        "Estimated fuel burned per flight by model. Small regional jets burn far less per "
+        "flight than large widebodies (a 10x or larger gap), so the fleet mix drives fuel cost."
+    )
 
     st.dataframe(
         fleet_filtered.select(

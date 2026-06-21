@@ -51,14 +51,16 @@ Current prepared totals:
 
 - The ticket `CLASS` codes `B`, `E`, `P` do not follow intuitive names. A data review showed
   three clear fare levels (B lowest, E middle, P highest), and the volumes do not match real
-  cabin behavior, so we label by neutral fare tier: **Lower fare (B)**, **Mid fare (E)**,
-  **Higher fare (P)**.
+  cabin behavior, so we label by neutral fare tier: **Lower fare (Business)**, **Mid fare
+  (Economy)**, **Higher fare (Premium)**.
 - The top city pair by revenue is **GMP and LHR** at about `$4.17B`, counting both directions.
-- The **Mid fare (E)** tier earns the most revenue (about `$219.6B`), driven by the highest
-  volume (about `170.5M` tickets) despite only a mid level fare.
-- The **Higher fare (P)** tier earns the least (about `$12B`) despite the highest fare, because
-  it has the lowest volume (about `6.7M` tickets).
-- The **Lower fare (B)** tier is the cheapest at about `$749` average fare.
+- The **Mid fare (Economy)** tier earns the most revenue (about `$219.6B`), driven by the
+  highest volume (about `170.5M` tickets) despite only a mid level fare.
+- The **Higher fare (Premium)** tier earns the least (about `$12B`) despite the highest fare,
+  because it has the lowest volume (about `6.7M` tickets).
+- The **Lower fare (Business)** tier is the cheapest at about `$749` average fare.
+- Small regional jets burn far less fuel per flight than large widebodies (about 350 gallons
+  versus 4,000 to 8,400), so the fleet mix drives fuel cost.
 - `BOMBARDIER CRJ-900` is the most heavily scheduled aircraft model, with `539,304` scheduled flights across `41` aircraft.
 
 ## Setup
@@ -115,8 +117,8 @@ The app reads the prepared Parquet files from `data/`.
 
 - **Cabin labels:** ticket `CLASS` codes B/E/P do not match intuitive cabin names, and the data
   does not behave like real cabins (the cheapest class is not the highest volume one). A data
-  review found three clear fare levels, so we label by neutral fare tier (Lower fare B, Mid fare
-  E, Higher fare P) instead of asserting Economy, Premium, or Business. This is the honest read.
+  review found three clear fare levels, so we prefix each by its fare tier and keep the apparent
+  class name in parentheses: Lower fare (Business), Mid fare (Economy), Higher fare (Premium).
 - **Route grain:** route_code is directional, so the top routes view aggregates both directions
   into one city pair. The route table still shows directional detail.
 - **Time coverage:** data runs 2010 to 2026, but 2026 is January only, so the date filter
