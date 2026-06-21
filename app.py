@@ -45,20 +45,25 @@ COLORWAY = [
     "#00004D",
 ]
 
-# Standard gradient for value-sorted charts: larger = brighter so the biggest values pop
-# on the dark background. Low = dark navy, mid = electric blue, high = bright light blue.
-BLUE_SCALE = [[0.0, "#06143A"], [0.5, "#0000FF"], [1.0, "#9FC4FF"]]
+# Single source of truth for color: every color in the app is drawn from this scheme so
+# the dashboard stays 100% coherent. It matches the dark theme in .streamlit/config.toml.
+NAVY = "#06143A"      # gradient low, darkest
+ELECTRIC = "#0000FF"  # gradient mid, primary accent (KPI cards, widgets)
+CYAN = "#02CCFE"      # gradient high, highlight for the largest values and single data marks
+
+# Value-sorted charts: larger = brighter, so the biggest values pop on the dark background.
+BLUE_SCALE = [[0.0, NAVY], [0.5, ELECTRIC], [1.0, CYAN]]
 
 px.defaults.template = "plotly_white"
 px.defaults.color_discrete_sequence = COLORWAY
 
 
 def blue_palette(n):
-    """n distinguishable blue tones, dark (low) to bright light blue (high), so the
-    largest category is the brightest. Anchors: dark navy -> electric blue -> light blue."""
-    anchors = [(0x06, 0x14, 0x3A), (0x00, 0x00, 0xFF), (0x9F, 0xC4, 0xFF)]
+    """n distinguishable blue tones, dark (low) to neon cyan (high), so the largest
+    category is the brightest. Anchors: dark navy -> electric blue -> neon cyan."""
+    anchors = [tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in (NAVY, ELECTRIC, CYAN)]
     if n <= 1:
-        return ["#9FC4FF"]
+        return [CYAN]
 
     def lerp(a, b, t):
         return tuple(round(a[c] + (b[c] - a[c]) * t) for c in range(3))
@@ -219,21 +224,27 @@ def aggregate_routes(df: pl.DataFrame) -> pl.DataFrame:
 def aggregate_city_pairs(route_df: pl.DataFrame) -> pl.DataFrame:
     """Combine both directions of a route into one unordered city pair (A and B).
 
-    route_code is directional, so A to B and B to A are separate rows. For "top routes"
-    we usually care about the city pair, so we sum both directions together.
+    route_code is directional, so A to B and B to A are separate rows. We sum both
+    directions and label each endpoint as "City (CODE)" so the chart is readable.
+    Full airport names are too long to fit, so we use the city name plus the IATA code.
     """
+    labelled = route_df.with_columns(
+        (pl.col("origin_city") + " (" + pl.col("origin") + ")").alias("origin_label"),
+        (pl.col("destination_city") + " (" + pl.col("destination") + ")").alias("destination_label"),
+    )
+    first_is_origin = pl.col("origin") <= pl.col("destination")
     return (
-        route_df.lazy()
+        labelled.lazy()
         .with_columns(
-            pl.min_horizontal("origin", "destination").alias("city_a"),
-            pl.max_horizontal("origin", "destination").alias("city_b"),
+            pl.when(first_is_origin).then(pl.col("origin_label")).otherwise(pl.col("destination_label")).alias("end_a"),
+            pl.when(first_is_origin).then(pl.col("destination_label")).otherwise(pl.col("origin_label")).alias("end_b"),
         )
-        .group_by("city_a", "city_b")
+        .group_by("end_a", "end_b")
         .agg(
             pl.col("tickets_sold").sum().alias("tickets_sold"),
             pl.col("total_revenue").sum().alias("total_revenue"),
         )
-        .with_columns((pl.col("city_a") + " and " + pl.col("city_b")).alias("city_pair"))
+        .with_columns((pl.col("end_a") + " and " + pl.col("end_b")).alias("city_pair"))
         .sort("total_revenue", descending=True)
         .collect()
     )
@@ -335,7 +346,7 @@ st.markdown(
         padding-top: 1.5rem;
     }
     div[data-testid="stMetric"] {
-        background: #0F62FF;
+        background: #0000FF; /* ELECTRIC accent from the color scheme */
         border: none;
         border-radius: 8px;
         padding: 0.7rem 0.85rem;
@@ -494,6 +505,7 @@ with tab_route:
         },
     )
     fig_routes.update_layout(coloraxis_showscale=False, yaxis_title="")
+    fig_routes.update_yaxes(automargin=True)
     st.plotly_chart(style_plot(fig_routes), width="stretch")
 
     left, right = st.columns(2)
@@ -630,7 +642,7 @@ with tab_fleet:
             "scheduled_distance": "Scheduled distance",
         },
     )
-    fig_maintenance.update_traces(marker=dict(color="#1E73FF", line=dict(width=0.5, color="#FFFFFF")))
+    fig_maintenance.update_traces(marker=dict(color=CYAN, line=dict(width=0.5, color="#FFFFFF")))
     st.plotly_chart(style_plot(fig_maintenance), width="stretch")
 
     st.dataframe(
