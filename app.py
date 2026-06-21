@@ -511,16 +511,22 @@ with tab_route:
     left, right = st.columns(2)
     with left:
         st.subheader("Revenue Efficiency")
+        # Bubble size is proportional to the average ticket value, so premium (longer,
+        # higher-fare) routes stand out. Low-fare routes near the origin stay small, which
+        # keeps the crowded corner from overlapping. Capped size and low opacity help too.
         fig_efficiency = px.scatter(
             route_filtered.to_pandas(),
             x="distance",
             y="avg_ticket_value",
-            size="tickets_sold",
-            size_max=9,
-            opacity=0.5,
+            size="avg_ticket_value",
+            size_max=15,
+            opacity=1.0,
             color="origin_continent",
-            color_discrete_map=ranked_blue_map(route_filtered, "origin_continent", "total_revenue"),
+            # Fixed high-contrast colors: Europe bright cyan, America electric blue, Asia black
+            # (kept visible by the white marker outline below).
+            color_discrete_map={"EUROPE": CYAN, "AMERICA": ELECTRIC, "ASIA": "#000000"},
             hover_name="route_label",
+            hover_data=["tickets_sold"],
             labels={
                 "distance": "Distance",
                 "avg_ticket_value": "Average ticket value",
@@ -528,7 +534,8 @@ with tab_route:
                 "origin_continent": "Origin continent",
             },
         )
-        fig_efficiency.update_traces(marker=dict(line=dict(width=0.25, color="#FFFFFF")))
+        # White outline keeps the dark Asia markers visible and separates overlapping bubbles.
+        fig_efficiency.update_traces(marker=dict(line=dict(width=0.5, color="#FFFFFF")))
         st.plotly_chart(style_plot(fig_efficiency), width="stretch")
 
     with right:
