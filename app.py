@@ -24,13 +24,14 @@ MONEY_COLUMNS = {
     "revenue_per_flight_minute",
 }
 
-# Cabin codes mapped to fare tiers by VERIFIED average fare, not by first letter.
-# Live DB check: FLIGHTS prices are Economy < Premium < Business, and ticket fares rank
-# B < E < P, so by fare B is the lowest tier and P the highest. See README for the note.
+# Ticket CLASS codes B/E/P do not follow intuitive names. A data review showed three clear
+# fare levels (B lowest, E middle, P highest) and the volumes do not behave like real cabins
+# (the cheapest class is not the highest volume one). So we label by neutral fare tier rather
+# than assert Economy/Premium/Business. The code is kept in parentheses for traceability.
 CABIN_LABELS = {
-    "B": "Economy",
-    "E": "Premium",
-    "P": "Business",
+    "B": "Lower fare (B)",
+    "E": "Mid fare (E)",
+    "P": "Higher fare (P)",
 }
 
 # Electric blue theme: only the blue RGB channel (no red, no green), varied by intensity.
@@ -127,11 +128,11 @@ def select_all_filter(label: str, values: list[str]) -> str:
 def cabin_name_expr() -> pl.Expr:
     return (
         pl.when(pl.col("cabin_class") == "B")
-        .then(pl.lit("Economy"))
+        .then(pl.lit("Lower fare (B)"))
         .when(pl.col("cabin_class") == "E")
-        .then(pl.lit("Premium"))
+        .then(pl.lit("Mid fare (E)"))
         .when(pl.col("cabin_class") == "P")
-        .then(pl.lit("Business"))
+        .then(pl.lit("Higher fare (P)"))
         .otherwise(pl.col("cabin_class"))
         .alias("cabin")
     )
@@ -480,7 +481,7 @@ st.markdown(
     f"""
 **Current readout:** the biggest city pair for the selected filters is `{top_pair["city_pair"]}` at {money(top_pair["total_revenue"])}, counting both directions.
 The highest yield route (average fare per distance) is `{best_yield_route["origin"]}` to `{best_yield_route["destination"]}`.
-Within the selected filters, the {top_cabin["cabin"]} cabin contributes the most revenue.
+Within the selected filters, the {top_cabin["cabin"]} tier contributes the most revenue.
 """
 )
 

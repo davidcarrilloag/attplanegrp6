@@ -49,15 +49,16 @@ Current prepared totals:
 
 ## Key Findings
 
-- Cabin codes `B`, `E`, `P` do not follow intuitive names. We mapped them to fare tiers by
-  their verified average fare (validated against the `FLIGHTS` prices Economy < Premium <
-  Business): **B = Economy** (lowest fare), **E = Premium**, **P = Business** (highest fare).
+- The ticket `CLASS` codes `B`, `E`, `P` do not follow intuitive names. A data review showed
+  three clear fare levels (B lowest, E middle, P highest), and the volumes do not match real
+  cabin behavior, so we label by neutral fare tier: **Lower fare (B)**, **Mid fare (E)**,
+  **Higher fare (P)**.
 - The top city pair by revenue is **GMP and LHR** at about `$4.17B`, counting both directions.
-- The **Premium** cabin (code E) is the largest by revenue (about `$219.6B`) and by volume
-  (about `170.5M` tickets). This is unusual and we treat it as a property of the dataset.
-- The **Business** cabin (code P) has the highest average fare (about `$1,772`) but the lowest
-  volume (about `6.7M` tickets).
-- The **Economy** cabin (code B) is the cheapest at about `$749` average fare.
+- The **Mid fare (E)** tier earns the most revenue (about `$219.6B`), driven by the highest
+  volume (about `170.5M` tickets) despite only a mid level fare.
+- The **Higher fare (P)** tier earns the least (about `$12B`) despite the highest fare, because
+  it has the lowest volume (about `6.7M` tickets).
+- The **Lower fare (B)** tier is the cheapest at about `$749` average fare.
 - `BOMBARDIER CRJ-900` is the most heavily scheduled aircraft model, with `539,304` scheduled flights across `41` aircraft.
 
 ## Setup
@@ -112,10 +113,10 @@ The app reads the prepared Parquet files from `data/`.
 
 ## Assumptions and Limitations
 
-- **Cabin mapping:** ticket `CLASS` codes B/E/P do not match intuitive cabin names, so we
-  mapped them to fare tiers by verified average fare (B = Economy, E = Premium, P = Business).
-  The volumes do not follow a typical pattern (the Premium tier has the highest volume), which
-  we treat as a property of the dataset, not a real commercial pattern.
+- **Cabin labels:** ticket `CLASS` codes B/E/P do not match intuitive cabin names, and the data
+  does not behave like real cabins (the cheapest class is not the highest volume one). A data
+  review found three clear fare levels, so we label by neutral fare tier (Lower fare B, Mid fare
+  E, Higher fare P) instead of asserting Economy, Premium, or Business. This is the honest read.
 - **Route grain:** route_code is directional, so the top routes view aggregates both directions
   into one city pair. The route table still shows directional detail.
 - **Time coverage:** data runs 2010 to 2026, but 2026 is January only, so the date filter
