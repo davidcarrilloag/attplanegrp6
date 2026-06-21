@@ -516,8 +516,8 @@ with tab_route:
             x="distance",
             y="avg_ticket_value",
             size="tickets_sold",
-            size_max=12,
-            opacity=0.72,
+            size_max=9,
+            opacity=0.5,
             color="origin_continent",
             color_discrete_map=ranked_blue_map(route_filtered, "origin_continent", "total_revenue"),
             hover_name="route_label",
@@ -528,7 +528,7 @@ with tab_route:
                 "origin_continent": "Origin continent",
             },
         )
-        fig_efficiency.update_traces(marker=dict(line=dict(width=0.5, color="#FFFFFF")))
+        fig_efficiency.update_traces(marker=dict(line=dict(width=0.25, color="#FFFFFF")))
         st.plotly_chart(style_plot(fig_efficiency), width="stretch")
 
     with right:
@@ -616,15 +616,16 @@ with tab_fleet:
         model_summary.head(15).to_pandas(),
         x="model",
         y="scheduled_flights",
-        color="aircraft",
+        color="scheduled_flights",
         color_continuous_scale=BLUE_SCALE,
         labels={
             "model": "Aircraft model",
             "scheduled_flights": "Scheduled flights",
-            "aircraft": "Aircraft count",
         },
     )
-    fig_fleet.update_layout(xaxis_tickangle=-35)
+    # Bars are sorted by scheduled flights and colored by the same value (tallest = brightest).
+    # The model names on the x axis identify each bar, so the color bar is hidden as noise.
+    fig_fleet.update_layout(xaxis_tickangle=-35, coloraxis_showscale=False)
     st.plotly_chart(style_plot(fig_fleet), width="stretch")
 
     st.subheader("Aircraft Utilization and Maintenance Exposure")
@@ -633,8 +634,8 @@ with tab_fleet:
         x="maintenance_flight_hours",
         y="scheduled_flights",
         size="scheduled_distance",
-        size_max=12,
-        opacity=0.72,
+        size_max=8,
+        opacity=0.45,
         hover_name="aircraft_registration",
         labels={
             "maintenance_flight_hours": "Maintenance flight hours",
@@ -642,7 +643,7 @@ with tab_fleet:
             "scheduled_distance": "Scheduled distance",
         },
     )
-    fig_maintenance.update_traces(marker=dict(color=CYAN, line=dict(width=0.5, color="#FFFFFF")))
+    fig_maintenance.update_traces(marker=dict(color=CYAN, line=dict(width=0.2, color="#FFFFFF")))
     st.plotly_chart(style_plot(fig_maintenance), width="stretch")
 
     st.dataframe(
