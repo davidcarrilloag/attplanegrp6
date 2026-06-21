@@ -519,7 +519,7 @@ with tab_route:
 
     left, right = st.columns(2)
     with left:
-        st.subheader("Revenue Efficiency")
+        st.subheader("Average Ticket Value vs Distance")
         # Bubble size is proportional to the average ticket value, so premium (longer,
         # higher-fare) routes stand out. Low-fare routes near the origin stay small, which
         # keeps the crowded corner from overlapping. Capped size and low opacity help too.
