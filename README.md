@@ -20,6 +20,8 @@ The dashboard is built for airline management, route planning, commercial analyt
 2. Which routes are most efficient in revenue per distance and revenue per flight minute?
 3. How does revenue change over time by cabin class?
 4. Which aircraft or aircraft models are most heavily used across scheduled flights?
+5. How well is capacity utilised (load factor = tickets sold / seats offered), and where is the
+   incremental demand opportunity?
 
 ## Data Source
 
@@ -39,6 +41,7 @@ Generated files:
 - `data/monthly_revenue.parquet`
 - `data/cabin_revenue.parquet`
 - `data/fleet_utilization.parquet`
+- `data/route_capacity.parquet` (load factor: tickets sold vs seats offered per route)
 
 Current prepared totals:
 
@@ -62,6 +65,9 @@ Current prepared totals:
 - Small regional jets burn far less fuel per flight than large widebodies (about 350 gallons
   versus 4,000 to 8,400), so the fleet mix drives fuel cost.
 - `BOMBARDIER CRJ-900` is the most heavily scheduled aircraft model, with `539,304` scheduled flights across `41` aircraft.
+- **Capacity is uniformly well-utilised: about `83%` load factor on every route** (a tight 81–84%
+  band). Planes are already near-full network-wide, so the growth lever is stimulating demand on
+  existing seats (closing the gap toward `90%`), not adding aircraft.
 
 ## Setup
 
@@ -105,6 +111,14 @@ Build the prepared Parquet files:
 python prepare_data.py
 ```
 
+> **Windows note (DB2 driver).** The bundled `ibm_db` CLI driver depends on the Microsoft
+> Visual C++ 2013 runtime (`msvcr120.dll`). If it is not installed system-wide, connections
+> fail with `SQL1042C`. The driver ships its own copy under
+> `clidriver/bin/amd64.VC12.CRT`; add that folder (and `clidriver/bin`) to the DLL search
+> path before importing `ibm_db` (e.g. via `os.add_dll_directory`), or install the VC++ 2013
+> redistributable. The **dashboard itself does not need the database** — it runs entirely from
+> the committed Parquet files, so this only affects re-running `prepare_data.py`.
+
 ## Run the Dashboard
 
 ```zsh
@@ -126,5 +140,10 @@ The app reads the prepared Parquet files from `data/`.
 - Revenue uses ticket `TOTAL_AMOUNT` (fare plus tax). Yield is the average fare per distance or
   per flight minute, with guards against zero or null denominators.
 - Fleet utilization uses scheduled flights, not completed or delayed operations.
+- **Load factor** = tickets sold / seats offered, where seats offered per route = scheduled
+  flights x the seat capacity of the aircraft that flew them (FLIGHTS joined to AIRPLANES). It
+  is computed over all cabins and the full history, so the Capacity view responds to the
+  geographic filters but not the date/cabin filters. The 90% target is an illustrative
+  benchmark; the revenue uplift assumes incremental tickets sell at the current average fare.
 - Passenger level analysis is intentionally excluded from the dashboard.
 - Prepared files should be regenerated if the DB2 source data changes.

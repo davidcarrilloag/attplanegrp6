@@ -304,6 +304,50 @@ def build_fleet_utilization(
     )
 
 
+def build_route_capacity(
+    flight_routes: pl.DataFrame,
+    route_revenue: pl.DataFrame,
+    airplanes: pl.DataFrame,
+) -> pl.DataFrame:
+    """Route-level load factor = tickets sold / available seats.
+
+    Available seats per route are the scheduled flights times the seat capacity of
+    the aircraft that flew them, summed across every aircraft on the route. We join
+    that to the route revenue table so the result keeps the geographic attributes
+    (continent/country) used by the dashboard filters.
+    """
+    seats_per_route = (
+        flight_routes.lazy()
+        .join(
+            airplanes.lazy().select("aircraft_registration", "seat_capacity"),
+            on="aircraft_registration",
+            how="left",
+        )
+        .with_columns(
+            (pl.col("scheduled_flights") * pl.col("seat_capacity")).alias("aircraft_seats")
+        )
+        .group_by("route_code")
+        .agg(
+            pl.col("scheduled_flights").sum().alias("scheduled_flights"),
+            pl.col("aircraft_seats").sum().alias("available_seats"),
+            pl.col("aircraft_registration").n_unique().alias("aircraft_used"),
+        )
+    )
+    return (
+        route_revenue.lazy()
+        .join(seats_per_route, on="route_code", how="inner")
+        .with_columns(
+            pl.when(pl.col("available_seats") > 0)
+            .then(pl.col("tickets_sold") / pl.col("available_seats"))
+            .otherwise(None)
+            .alias("load_factor")
+        )
+        .filter(pl.col("load_factor").is_not_null())
+        .sort("load_factor", descending=True)
+        .collect()
+    )
+
+
 def prepare_all(config: DBConfig | None = None, output_dir: Path = DATA_DIR) -> None:
     config = config or DBConfig.from_env()
     output_dir.mkdir(exist_ok=True)
@@ -316,15 +360,21 @@ def prepare_all(config: DBConfig | None = None, output_dir: Path = DATA_DIR) -> 
         refs["airports"],
     )
     flight_routes = read_flight_route_aggregate(config)
+    route_revenue = build_route_revenue(route_monthly)
 
     outputs = {
         "route_monthly_revenue.parquet": route_monthly,
-        "route_revenue.parquet": build_route_revenue(route_monthly),
+        "route_revenue.parquet": route_revenue,
         "monthly_revenue.parquet": build_monthly_revenue(route_monthly),
         "cabin_revenue.parquet": build_cabin_revenue(route_monthly),
         "fleet_utilization.parquet": build_fleet_utilization(
             flight_routes,
             refs["routes"],
+            refs["airplanes"],
+        ),
+        "route_capacity.parquet": build_route_capacity(
+            flight_routes,
+            route_revenue,
             refs["airplanes"],
         ),
     }
