@@ -674,7 +674,7 @@ with tab_route:
                 lataxis_range=[-55, 80],
             )
             fig_map.update_layout(height=430, margin=dict(l=0, r=0, t=6, b=0))
-            st.plotly_chart(fig_map, width="stretch")
+            st.plotly_chart(fig_map, use_container_width=True)
 
     with bar_col:
         with st.container(border=True):
@@ -723,7 +723,7 @@ with tab_route:
                     ))
             fig_conc.update_xaxes(title=f"Routes ranked by revenue (of {n_pairs})", rangemode="tozero")
             fig_conc.update_yaxes(title="Cumulative revenue", ticksuffix="%", range=[0, 101])
-            st.plotly_chart(finalize(fig_conc, height=430, legend=True), width="stretch")
+            st.plotly_chart(finalize(fig_conc, height=430, legend=True), use_container_width=True)
 
     left, right = st.columns([1, 1])
     with left:
@@ -741,7 +741,7 @@ with tab_route:
                 hovertemplate="<b>%{hovertext}</b><br>Distance: %{x:,} km<br>Avg fare: %{y:$,.0f}<br>Tickets: %{customdata[0]:,}<extra></extra>",
             )
             fig_eff.update_yaxes(tickprefix="$")
-            st.plotly_chart(finalize(fig_eff, height=380, legend=True), width="stretch")
+            st.plotly_chart(finalize(fig_eff, height=380, legend=True), use_container_width=True)
 
     with right:
         with st.container(border=True):
@@ -754,7 +754,7 @@ with tab_route:
                 .collect()
             )
             st.dataframe(
-                yield_table, width="stretch", hide_index=True, height=330,
+                yield_table, use_container_width=True, hide_index=True, height=330,
                 column_config={
                     "route_label": st.column_config.TextColumn("Route"),
                     "tickets_sold": st.column_config.NumberColumn("Tickets", format="%d"),
@@ -780,7 +780,7 @@ with tab_time:
         )
         fig_month.update_traces(line=dict(width=0.8), hovertemplate="%{x|%b %Y}<br>$%{y:.2f}B<extra></extra>")
         fig_month.update_yaxes(tickprefix="$", ticksuffix="B")
-        st.plotly_chart(finalize(fig_month, height=340, legend=True), width="stretch")
+        st.plotly_chart(finalize(fig_month, height=340, legend=True), use_container_width=True)
 
     c1, c2 = st.columns([1.4, 1])
     with c1:
@@ -793,7 +793,7 @@ with tab_time:
             )
             fig_tix.update_traces(line=dict(width=2), hovertemplate="%{x|%b %Y}<br>%{y:,} tickets<extra></extra>")
             fig_tix.update_yaxes(tickformat="~s")
-            st.plotly_chart(finalize(fig_tix, height=330, legend=True), width="stretch")
+            st.plotly_chart(finalize(fig_tix, height=330, legend=True), use_container_width=True)
 
     with c2:
         with st.container(border=True):
@@ -811,7 +811,7 @@ with tab_time:
             )
             fig_mix.add_annotation(text=f"<b>{number(tickets_sold)}</b><br><span style='color:{MUTED}'>tickets</span>",
                                    showarrow=False, font=dict(size=15, color=TEXT))
-            st.plotly_chart(finalize(fig_mix, height=330, legend=True), width="stretch")
+            st.plotly_chart(finalize(fig_mix, height=330, legend=True), use_container_width=True)
 
     with st.container(border=True):
         panel_header(
@@ -833,7 +833,7 @@ with tab_time:
             fig_rev.update_yaxes(visible=False)
             fig_rev.add_annotation(text="Total revenue", xref="paper", yref="paper", x=0, y=1.06,
                                    showarrow=False, font=dict(color=MUTED, size=12), xanchor="left")
-            st.plotly_chart(finalize(fig_rev, height=330), width="stretch")
+            st.plotly_chart(finalize(fig_rev, height=330), use_container_width=True)
         with col_fare:
             fig_fare = px.bar(cab2, x="cabin", y="avg_ticket_value", text="fare_label",
                               labels={"cabin": "", "avg_ticket_value": ""})
@@ -843,7 +843,7 @@ with tab_time:
             fig_fare.update_yaxes(visible=False)
             fig_fare.add_annotation(text="Average fare", xref="paper", yref="paper", x=0, y=1.06,
                                     showarrow=False, font=dict(color=MUTED, size=12), xanchor="left")
-            st.plotly_chart(finalize(fig_fare, height=330), width="stretch")
+            st.plotly_chart(finalize(fig_fare, height=330), use_container_width=True)
 
 # ===========================================================================
 # TAB — CAPACITY / LOAD FACTOR
@@ -906,7 +906,7 @@ with tab_cap:
                                        annotation_font_color=MUTED)
                     fig_hist.update_xaxes(tickformat=".0%", title="Load factor")
                     fig_hist.update_yaxes(title="Routes")
-                    st.plotly_chart(finalize(fig_hist, height=360), width="stretch")
+                    st.plotly_chart(finalize(fig_hist, height=360), use_container_width=True)
             with c2:
                 with st.container(border=True):
                     panel_header(
@@ -933,7 +933,7 @@ with tab_cap:
                                             hovertemplate="<b>%{y}</b><br>%{x:,} empty seats<extra></extra>")
                     fig_empty.update_layout(coloraxis_showscale=False)
                     fig_empty.update_xaxes(visible=False)
-                    st.plotly_chart(finalize(fig_empty, height=360), width="stretch")
+                    st.plotly_chart(finalize(fig_empty, height=360), use_container_width=True)
 
 # ===========================================================================
 # TAB 3 — FLEET
@@ -957,7 +957,7 @@ with tab_fleet:
                                     hovertemplate="<b>%{y}</b><br>%{x:,} flights<extra></extra>")
             fig_fleet.update_layout(coloraxis_showscale=False)
             fig_fleet.update_xaxes(visible=False)
-            st.plotly_chart(finalize(fig_fleet, height=420), width="stretch")
+            st.plotly_chart(finalize(fig_fleet, height=420), use_container_width=True)
 
     with f2:
         with st.container(border=True):
@@ -983,7 +983,7 @@ with tab_fleet:
                                    hovertemplate="<b>%{y}</b><br>%{x:,.0f} gal/flight<extra></extra>")
             fig_fuel.update_layout(coloraxis_showscale=False)
             fig_fuel.update_xaxes(visible=False)
-            st.plotly_chart(finalize(fig_fuel, height=420), width="stretch")
+            st.plotly_chart(finalize(fig_fuel, height=420), use_container_width=True)
 
     with st.container(border=True):
         panel_header("Utilization vs maintenance exposure", "Each point is a model. X = scheduled flight hours, Y = avg maintenance hours, size = fleet count.")
@@ -999,7 +999,7 @@ with tab_fleet:
         fig_util.update_traces(marker=dict(opacity=0.88, line=dict(width=0.5, color="rgba(15,27,45,0.20)")))
         fig_util.update_xaxes(tickformat="~s")
         fig_util.update_layout(coloraxis_colorbar=dict(title="Fuel", tickformat="~s"))
-        st.plotly_chart(finalize(fig_util, height=380), width="stretch")
+        st.plotly_chart(finalize(fig_util, height=380), use_container_width=True)
 
 # ===========================================================================
 # TAB 4 — DATA
@@ -1013,7 +1013,7 @@ with tab_data:
                 "distance", "flight_minutes", "tickets_sold", "total_revenue",
                 "avg_ticket_value", "fare_per_distance",
             ).sort("total_revenue", descending=True),
-            width="stretch", hide_index=True, height=460,
+            use_container_width=True, hide_index=True, height=460,
             column_config={
                 "route_code": st.column_config.TextColumn("Route"),
                 "origin": "From", "destination": "To",
@@ -1047,7 +1047,7 @@ with tab_data:
                 "scheduled_distance", "scheduled_flight_hours", "maintenance_takeoffs",
                 "maintenance_flight_hours", "routes_served",
             ).sort("scheduled_flights", descending=True),
-            width="stretch", hide_index=True, height=380,
+            use_container_width=True, hide_index=True, height=380,
         )
 
 st.markdown(
